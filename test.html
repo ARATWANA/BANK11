@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banking System</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            font-size: 18px;
+            color: #555;
+        }
+
+        input {
+            padding: 10px;
+            margin: 8px;
+            width: 80%;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 12px;
+            margin: 8px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            width: 80%;
+            box-sizing: border-box;
+        }
+
+        #loginSection, #accountSection {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #accountSection {
+            display: none;
+        }
+
+        #accountInfo {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        #transactionHistory {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="loginSection">
+        <h1>Login</h1>
+
+        <label for="username">Username:</label>
+        <input type="text" id="username" placeholder="Enter username">
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" placeholder="Enter password">
+
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="accountSection" style="display:none;">
+        <h1>Account</h1>
+        <p id="accountInfo">Account Holder: </p>
+        <p id="balance">Account Balance: $0.00</p>
+
+        <label for="amount">Amount: $</label>
+        <input type="number" id="amount" placeholder="Enter amount">
+
+        <label for="receiver">Receiver Username:</label>
+        <input type="text" id="receiver" placeholder="Enter receiver's username">
+
+        <button onclick="checkBalance()">Check Balance</button>
+        <button onclick="makeDeposit()">Deposit</button>
+        <button onclick="makeWithdrawal()">Withdraw</button>
+        <button onclick="makeTransfer()">Transfer Money</button>
+        <button onclick="showTransactionHistory()">Transaction History</button>
+        <button onclick="logout()">Logout</button>
+
+        <div id="transactionHistory" style="display:none;">
+            <h2>Transaction History</h2>
+            <ul id="transactionList"></ul>
+        </div>
+    </div>
+
+    <script>
+        let accounts = [
+            { username: "ARA", password: "ARA20102005", name: "Ara", balance: 0.0, canTransfer: true, transactions: [] },
+            { username: "PERS", password: "E7PERS", name: "Pers", balance: 0.0, canTransfer: false, transactions: [] },
+            { username: "AROS", password: "CR7AROS", name: "Aros", balance: 0.0, canTransfer: false, transactions: [] },
+            { username: "HAMWD", password: "HAMWDSRT2018", name: "Hamwd", balance: 0.0, canTransfer: false, transactions: [] }
+            // Add more accounts as needed
+        ];
+
+        let currentAccount = null;
+        let isLoggedIn = false;
+
+        function showAccountSection() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('accountSection').style.display = 'block';
+        }
+
+        function displayAccountInfo() {
+            document.getElementById('accountInfo').innerText = `Account Holder: ${currentAccount.name} (${currentAccount.username})`;
+        }
+
+        function displayBalance() {
+            document.getElementById('balance').innerText = `Account Balance: $${currentAccount.balance.toFixed(2)}`;
+        }
+
+        function displayTransactionHistory() {
+            const transactionList = document.getElementById('transactionList');
+            transactionList.innerHTML = '';
+
+            currentAccount.transactions.forEach(transaction => {
+                const listItem = document.createElement('li');
+                let transactionDetails;
+
+                if (transaction.amount >= 0) {
+                    transactionDetails = `Deposited: $${transaction.amount.toFixed(2)}`;
+                } else if (transaction.amount < 0) {
+                    transactionDetails = `Withdrawn: $${(-transaction.amount).toFixed(2)}`;
+                } else {
+                    transactionDetails = `Transferred: $${transaction.transferAmount.toFixed(2)} to ${transaction.receiverName}`;
+                    transactionDetails += `, Receiver Balance: $${transaction.receiverBalance.toFixed(2)}`;
+                }
+
+                const initiator = transaction.transferBy ? ` by ${transaction.transferBy}` : '';
+                
+                listItem.textContent = `${transaction.date} ${transaction.time} - ${transactionDetails}${initiator}`;
+                transactionList.appendChild(listItem);
+            });
+        }
+
+        function login() {
+            const enteredUsername = document.getElementById('username').value;
+            const enteredPassword = document.getElementById('password').value;
+
+            const foundAccount = accounts.find(account => account.username === enteredUsername && account.password === enteredPassword);
+
+            if (foundAccount) {
+                currentAccount = { ...foundAccount };
+                isLoggedIn = true;
+                showAccountSection();
+
+                displayAccountInfo();
+                displayBalance();
+            } else {
+                alert('Invalid username or password. Please try again.');
+            }
+        }
+
+        function logout() {
+            currentAccount = null;
+            isLoggedIn = false;
+
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('accountSection').style.display = 'none';
+        }
+
+        function checkBalance() {
+            if (isLoggedIn) {
+                displayBalance();
+            } else {
+                alert('Please log in first.');
+            }
+        }
+
+        function makeDeposit() {
+            if (isLoggedIn && currentAccount.canTransfer) {
+                const amount = parseFloat(document.getElementById('amount').value);
+                if (!isNaN(amount) && amount > 0) {
+                    currentAccount.balance += amount;
+                    const transaction = { date: getCurrentDate(), time: getCurrentTime(), amount, name: currentAccount.name, transferBy: currentAccount.name };
+                    currentAccount.transactions.push(transaction);
+                    displayBalance();
+                } else {
+                    alert('Invalid deposit amount. Please enter a valid number.');
+                }
+            } else {
+                alert('You do not have permission to deposit or not logged in.');
+            }
+        }
+
+        function makeWithdrawal() {
+            if (isLoggedIn && currentAccount.canTransfer) {
+                const amount = parseFloat(document.getElementById('amount').value);
+                if (!isNaN(amount) && amount > 0 && amount <= currentAccount.balance) {
+                    currentAccount.balance -= amount;
+                    const transaction = { date: getCurrentDate(), time: getCurrentTime(), amount: -amount, name: currentAccount.name, transferBy: currentAccount.name };
+                    currentAccount.transactions.push(transaction);
+                    displayBalance();
+                } else {
+                    alert('Invalid withdrawal amount or insufficient funds. Please check your input.');
+                }
+            } else {
+                alert('You do not have permission to withdraw or not logged in.');
+            }
+        }
+
+        function makeTransfer() {
+            if (isLoggedIn) {
+                const amount = parseFloat(document.getElementById('amount').value);
+                const receiverUsername = document.getElementById('receiver').value;
+
+                if (!isNaN(amount) && amount > 0 && receiverUsername) {
+                    const receiverAccount = accounts.find(account => account.username === receiverUsername);
+
+                    if (receiverAccount) {
+                        if (amount <= currentAccount.balance) {
+                            currentAccount.balance -= amount;
+                            receiverAccount.balance += amount;
+
+                            const senderTransaction = { 
+                                date: getCurrentDate(), 
+                                time: getCurrentTime(), 
+                                amount: -amount, 
+                                transferAmount: amount, 
+                                receiverName: receiverAccount.name, 
+                                receiverBalance: receiverAccount.balance,
+                                transferBy: currentAccount.name 
+                            };
+                            
+                            const receiverTransaction = { 
+                                date: getCurrentDate(), 
+                                time: getCurrentTime(), 
+                                amount, 
+                                transferAmount: amount, 
+                                receiverName: currentAccount.name, 
+                                receiverBalance: currentAccount.balance,
+                                transferBy: currentAccount.name 
+                            };
+
+                            currentAccount.transactions.push(senderTransaction);
+                            receiverAccount.transactions.push(receiverTransaction);
+
+                            displayBalance();
+                        } else {
+                            alert('Insufficient funds. Transfer canceled.');
+                        }
+                    } else {
+                        alert('Receiver account not found.');
+                    }
+                } else {
+                    alert('Invalid transfer details. Please enter valid values.');
+                }
+            } else {
+                alert('Please log in first.');
+            }
+        }
+
+        function showTransactionHistory() {
+            displayTransactionHistory();
+            document.getElementById('transactionHistory').style.display = 'block';
+        }
+
+        function getCurrentDate() {
+            const now = new Date();
+            return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
+<link rel="stylesheet" href="test.java">
+<link rel="stylesheet" href="test.css">
